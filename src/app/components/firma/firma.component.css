@@ -208,7 +208,7 @@ input[type="file"] { display: none; }
   background: transparent;
   border: none;
   padding: 0;
-  gap: 8px;
+  gap: 1px; /* Super pegado al QR */
 }
 
 .sello-fijo .sello-inner {
@@ -216,8 +216,8 @@ input[type="file"] { display: none; }
 }
 
 .sello-qr-svg {
-  width: 45px;
-  height: 45px;
+  width: 31px;
+  height: 31px;
   flex-shrink: 0;
   border: none;
   background: transparent;
@@ -230,25 +230,25 @@ input[type="file"] { display: none; }
 }
 
 .sello-l1 {
-  font-size: 7px;
-  line-height: 1.2;
+  font-size: 3.5px;
+  line-height: 1;
   color: #000;
   font-weight: normal;
   font-family: 'Courier New', Courier, monospace;
 }
 
 .sello-l2 {
-  font-size: 7px;
-  line-height: 1.2;
+  font-size: 3.5px;
+  line-height: 1;
   color: #000;
   font-weight: normal;
   font-family: 'Courier New', Courier, monospace;
-  margin-bottom: 2px;
+  margin-bottom: 1.5px;
 }
 
 .sello-nombre {
-  font-size: 9px;
-  line-height: 1.2;
+  font-size: 5.5px;
+  line-height: 1;
   color: #000;
   font-weight: bold;
   text-transform: uppercase;

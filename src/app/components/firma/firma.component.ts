@@ -2,7 +2,7 @@ import { Component, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FirmaService } from '../../services/firma.service';
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
 
 // Worker local (copiado a /pdf.worker.min.mjs por angular.json assets)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -218,14 +218,14 @@ export class FirmaComponent implements OnDestroy {
     // PDF tiene Y invertido (0 = abajo).
     // El backend dibuja el QR desde su esquina INFERIOR-IZQUIERDA.
     // El clic del usuario marca la esquina SUPERIOR-IZQUIERDA.
-    // El QR mide 55pt de alto, así que: posY_backend = pageHeight - clickY - 55
+    // El QR mide 36pt de alto, así que: posY_backend = pageHeight - clickY - 36
     const pageHeight = this.pageViewport.viewBox[3];
     const pdfY_fromBottom = pageHeight - pdfClickY;
 
     // X = exacto donde hizo clic (esquina izquierda del QR)
     // Y = restar el alto del QR para que la esquina superior quede en el punto de clic
     this.coordPdfX = Math.max(10, Math.round(pdfClickX));
-    this.coordPdfY = Math.max(10, Math.round(pdfY_fromBottom - 55));
+    this.coordPdfY = Math.max(10, Math.round(pdfY_fromBottom - 36));
     this.coordPagina = this.page;
 
     console.log('Click CSS:', clickX, clickY, '-> PDF:', this.coordPdfX, this.coordPdfY, 'page:', this.coordPagina);
