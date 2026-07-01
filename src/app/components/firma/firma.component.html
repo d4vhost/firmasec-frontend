@@ -1,42 +1,156 @@
-<div class="firma-container">
-  <div class="firma-card">
-    <div class="card-header">
-      <h2>Firma Electrónica</h2>
-      <p>Firma tus documentos internamente de forma segura</p>
+<!-- ═══ FORMULARIO ═══ -->
+<div class="firma-wrap">
+  <h3>Firma Electrónica</h3>
+
+  <label>Documento PDF</label>
+  <div class="drop-zone"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave($event)"
+       (drop)="onDrop($event)"
+       (click)="pdfInput.click()"
+       [class.dragover]="isDragOver">
+    <span *ngIf="!pdfFileName">Arrastra el PDF aquí o haz clic para seleccionar</span>
+    <span *ngIf="pdfFileName">{{ pdfFileName }}</span>
+    <input type="file" #pdfInput accept="application/pdf" (change)="onFileSelected($event, 'pdf')">
+  </div>
+
+  <label>Certificado (.p12 / .pfx)</label>
+  <button class="btn-file" (click)="p12Input.click()">
+    {{ p12FileName || 'Seleccionar certificado' }}
+  </button>
+  <input type="file" #p12Input accept=".p12,.pfx" (change)="onFileSelected($event, 'p12')">
+
+  <label>Contraseña</label>
+  <input type="password" class="form-control" [(ngModel)]="password" placeholder="Contraseña del certificado">
+
+  <button class="btn-main" (click)="abrirVisor()" [disabled]="isLoading || !formularioValido">
+    <span *ngIf="isLoading" class="spinner"></span>
+    {{ isLoading ? 'Firmando...' : 'Estampar Firma' }}
+  </button>
+</div>
+
+<!-- ═══ MODAL VISOR ═══ -->
+<div class="viewer-overlay" *ngIf="showViewer" (click)="cerrarVisor()">
+  <div class="viewer-modal" (click)="$event.stopPropagation()">
+
+    <!-- Barra superior -->
+    <div class="viewer-bar">
+      <span *ngIf="pdfRendering">Cargando PDF...</span>
+      <span *ngIf="!pdfRendering && !selloFijado">Haz clic en el PDF donde quieras poner la firma</span>
+      <span *ngIf="!pdfRendering && selloFijado">Firma ubicada — Página {{ coordPagina }} · X:{{ coordPdfX }}, Y:{{ coordPdfY }}</span>
+      <div class="bar-btns">
+        <button *ngIf="selloFijado" (click)="selloFijado = false; selloVisible = true">Reubicar</button>
+        <button class="btn-confirmar" *ngIf="selloFijado" (click)="confirmarFirma()">Confirmar y Firmar</button>
+        <button class="btn-cerrar" (click)="cerrarVisor()">X</button>
+      </div>
     </div>
 
-    <!-- Drag & Drop PDF -->
-    <div class="drop-zone" 
-         (dragover)="onDragOver($event)" 
-         (dragleave)="onDragLeave($event)" 
-         (drop)="onDrop($event)"
-         (click)="pdfInput.click()"
-         [class.dragover]="isDragOver">
-      <i>📄</i>
-      <span *ngIf="!pdfFileName">Arrastra tu PDF aquí o haz clic para buscar</span>
-      <span *ngIf="pdfFileName" class="file-name">{{ pdfFileName }}</span>
-      <input type="file" #pdfInput accept="application/pdf" (change)="onFileSelected($event, 'pdf')">
+    <!-- Paginación -->
+    <div class="pag-bar" *ngIf="totalPages > 1">
+      <button (click)="cambiarPagina(-1)" [disabled]="page <= 1 || pdfRendering">Anterior</button>
+      <span>Pagina {{ page }} de {{ totalPages }}</span>
+      <button (click)="cambiarPagina(1)" [disabled]="page >= totalPages || pdfRendering">Siguiente</button>
     </div>
 
-    <!-- P12 Input -->
-    <div class="form-group">
-      <label>Certificado de Firma (.p12 / .pfx)</label>
-      <button type="button" class="btn-file" (click)="p12Input.click()">
-        {{ p12FileName || 'Seleccionar Certificado' }}
-      </button>
-      <input type="file" #p12Input accept=".p12,.pfx" (change)="onFileSelected($event, 'p12')">
+    <!-- Canvas del PDF -->
+    <div class="canvas-scroll" #canvasWrapper>
+      <div class="canvas-container"
+           [class.crosshair]="selloVisible && !selloFijado"
+           (mousemove)="onMouseMove($event)"
+           (click)="onCanvasClick($event)">
+
+        <!-- Canvas donde PDF.js renderiza directamente -->
+        <canvas #pdfCanvas class="pdf-canvas"></canvas>
+
+        <!-- Sello flotando con el cursor -->
+        <div class="sello"
+             *ngIf="selloVisible && !selloFijado"
+             [style.left.px]="selloX"
+             [style.top.px]="selloY">
+          <ng-container *ngTemplateOutlet="selloTpl"></ng-container>
+        </div>
+
+        <!-- Sello fijado -->
+        <div class="sello sello-fijo"
+             *ngIf="selloFijado"
+             [style.left.px]="selloFijoX"
+             [style.top.px]="selloFijoY">
+          <ng-container *ngTemplateOutlet="selloTpl"></ng-container>
+        </div>
+
+      </div>
     </div>
 
-    <!-- Password Input -->
-    <div class="form-group">
-      <label>Contraseña del Certificado</label>
-      <input type="password" class="form-control" [(ngModel)]="password" placeholder="Ingresa la contraseña de tu firma">
-    </div>
-
-    <!-- Submit -->
-    <button class="btn-submit" (click)="firmar()" [disabled]="isLoading || !pdfBase64 || !p12Base64 || !password">
-      <span *ngIf="isLoading" class="spinner"></span>
-      {{ isLoading ? 'Firmando documento...' : 'Firmar Documento' }}
-    </button>
   </div>
 </div>
+
+<!-- Template del sello -->
+<ng-template #selloTpl>
+  <div class="sello-inner">
+    <svg class="sello-qr-svg" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="7" height="7" fill="black"/>
+      <rect x="3" y="3" width="3" height="3" fill="black"/>
+      <rect x="17" y="1" width="7" height="7" fill="black"/>
+      <rect x="19" y="3" width="3" height="3" fill="black"/>
+      <rect x="1" y="17" width="7" height="7" fill="black"/>
+      <rect x="3" y="19" width="3" height="3" fill="black"/>
+      <rect x="9" y="7" width="1" height="1" fill="black"/>
+      <rect x="11" y="7" width="1" height="1" fill="black"/>
+      <rect x="13" y="7" width="1" height="1" fill="black"/>
+      <rect x="7" y="9" width="1" height="1" fill="black"/>
+      <rect x="7" y="11" width="1" height="1" fill="black"/>
+      <rect x="7" y="13" width="1" height="1" fill="black"/>
+      <rect x="9"  y="1" width="1" height="1" fill="black"/>
+      <rect x="11" y="1" width="2" height="1" fill="black"/>
+      <rect x="14" y="1" width="1" height="1" fill="black"/>
+      <rect x="10" y="3" width="1" height="1" fill="black"/>
+      <rect x="13" y="3" width="2" height="1" fill="black"/>
+      <rect x="9"  y="5" width="2" height="1" fill="black"/>
+      <rect x="14" y="5" width="1" height="1" fill="black"/>
+      <rect x="1"  y="9" width="2" height="1" fill="black"/>
+      <rect x="5"  y="9" width="1" height="1" fill="black"/>
+      <rect x="2"  y="11" width="1" height="1" fill="black"/>
+      <rect x="4"  y="11" width="2" height="1" fill="black"/>
+      <rect x="1"  y="13" width="1" height="1" fill="black"/>
+      <rect x="3"  y="13" width="3" height="1" fill="black"/>
+      <rect x="2"  y="15" width="2" height="1" fill="black"/>
+      <rect x="5"  y="15" width="1" height="1" fill="black"/>
+      <rect x="9"  y="9" width="3" height="3" fill="black"/>
+      <rect x="13" y="9" width="1" height="1" fill="black"/>
+      <rect x="15" y="9" width="2" height="1" fill="black"/>
+      <rect x="9"  y="13" width="2" height="1" fill="black"/>
+      <rect x="13" y="13" width="3" height="1" fill="black"/>
+      <rect x="10" y="15" width="1" height="1" fill="black"/>
+      <rect x="12" y="15" width="4" height="1" fill="black"/>
+      <rect x="17" y="9" width="2" height="1" fill="black"/>
+      <rect x="21" y="9" width="2" height="1" fill="black"/>
+      <rect x="18" y="11" width="1" height="1" fill="black"/>
+      <rect x="20" y="11" width="3" height="1" fill="black"/>
+      <rect x="17" y="13" width="3" height="1" fill="black"/>
+      <rect x="22" y="13" width="2" height="1" fill="black"/>
+      <rect x="17" y="15" width="1" height="1" fill="black"/>
+      <rect x="19" y="15" width="4" height="1" fill="black"/>
+      <rect x="9"  y="17" width="1" height="1" fill="black"/>
+      <rect x="11" y="17" width="3" height="1" fill="black"/>
+      <rect x="15" y="17" width="1" height="1" fill="black"/>
+      <rect x="10" y="19" width="2" height="1" fill="black"/>
+      <rect x="14" y="19" width="2" height="1" fill="black"/>
+      <rect x="9"  y="21" width="3" height="1" fill="black"/>
+      <rect x="13" y="21" width="1" height="1" fill="black"/>
+      <rect x="15" y="21" width="2" height="1" fill="black"/>
+      <rect x="17" y="17" width="3" height="1" fill="black"/>
+      <rect x="22" y="17" width="2" height="1" fill="black"/>
+      <rect x="17" y="19" width="1" height="1" fill="black"/>
+      <rect x="19" y="19" width="2" height="1" fill="black"/>
+      <rect x="22" y="19" width="2" height="1" fill="black"/>
+      <rect x="18" y="21" width="2" height="1" fill="black"/>
+      <rect x="21" y="21" width="3" height="1" fill="black"/>
+    </svg>
+    <div class="sello-txt">
+      <span class="sello-l1">Validar únicamente en FirmaEC.</span>
+      <span class="sello-l2">Firmado electrónicamente por:</span>
+      <b class="sello-nombre">NOMBRE DEL FIRMANTE</b>
+      <b class="sello-nombre">APELLIDOS</b>
+    </div>
+  </div>
+</ng-template>
