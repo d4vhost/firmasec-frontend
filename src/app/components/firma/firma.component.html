@@ -1,0 +1,42 @@
+<div class="firma-container">
+  <div class="firma-card">
+    <div class="card-header">
+      <h2>Firma Electrónica</h2>
+      <p>Firma tus documentos internamente de forma segura</p>
+    </div>
+
+    <!-- Drag & Drop PDF -->
+    <div class="drop-zone" 
+         (dragover)="onDragOver($event)" 
+         (dragleave)="onDragLeave($event)" 
+         (drop)="onDrop($event)"
+         (click)="pdfInput.click()"
+         [class.dragover]="isDragOver">
+      <i>📄</i>
+      <span *ngIf="!pdfFileName">Arrastra tu PDF aquí o haz clic para buscar</span>
+      <span *ngIf="pdfFileName" class="file-name">{{ pdfFileName }}</span>
+      <input type="file" #pdfInput accept="application/pdf" (change)="onFileSelected($event, 'pdf')">
+    </div>
+
+    <!-- P12 Input -->
+    <div class="form-group">
+      <label>Certificado de Firma (.p12 / .pfx)</label>
+      <button type="button" class="btn-file" (click)="p12Input.click()">
+        {{ p12FileName || 'Seleccionar Certificado' }}
+      </button>
+      <input type="file" #p12Input accept=".p12,.pfx" (change)="onFileSelected($event, 'p12')">
+    </div>
+
+    <!-- Password Input -->
+    <div class="form-group">
+      <label>Contraseña del Certificado</label>
+      <input type="password" class="form-control" [(ngModel)]="password" placeholder="Ingresa la contraseña de tu firma">
+    </div>
+
+    <!-- Submit -->
+    <button class="btn-submit" (click)="firmar()" [disabled]="isLoading || !pdfBase64 || !p12Base64 || !password">
+      <span *ngIf="isLoading" class="spinner"></span>
+      {{ isLoading ? 'Firmando documento...' : 'Firmar Documento' }}
+    </button>
+  </div>
+</div>
