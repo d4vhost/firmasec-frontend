@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, OnDestroy } from '@angular/core';
+import { Component, ElementRef, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FirmaService } from '../../services/firma.service';
@@ -7,6 +7,65 @@ import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
 // Worker local (copiado a /pdf.worker.min.mjs por angular.json assets)
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
+const DB_NAME = 'FirmaEC_DB';
+const STORE_NAME = 'certStore';
+
+function saveCertToIndexedDB(certFile: File): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e: any) => {
+      e.target.result.createObjectStore(STORE_NAME);
+    };
+    request.onsuccess = (e: any) => {
+      const db = e.target.result;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).put(certFile, 'miCertificado');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function loadCertFromIndexedDB(): Promise<File | null> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e: any) => {
+      e.target.result.createObjectStore(STORE_NAME);
+    };
+    request.onsuccess = (e: any) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+         resolve(null);
+         return;
+      }
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const getReq = tx.objectStore(STORE_NAME).get('miCertificado');
+      getReq.onsuccess = () => resolve(getReq.result || null);
+      getReq.onerror = () => reject(getReq.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function deleteCertFromIndexedDB(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onsuccess = (e: any) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+         resolve();
+         return;
+      }
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).delete('miCertificado');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 @Component({
   selector: 'app-firma',
   standalone: true,
@@ -14,11 +73,30 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   templateUrl: './firma.component.html',
   styleUrls: ['./firma.component.css']
 })
-export class FirmaComponent implements OnDestroy {
+export class FirmaComponent implements OnInit, OnDestroy {
+
+  // ── Desktop UI State ──
+  currentDate = new Date().toLocaleString('es-EC');
+
+  // ── FirmaEC Modal State ──
+  showFirmaECModal: boolean = false;
+  firmaECTab: 'firmar' | 'verificar' | 'validar' = 'firmar';
+  
+  savedCertFile: File | null = null;
+  tempUploadCert: File | null = null;
 
   // ── Formulario ──
-  pdfBase64: string = '';
-  pdfFileName: string = '';
+  adjuntos: { name: string; base64: string }[] = [];
+  adjuntoSeleccionado: number = -1;
+  
+  get pdfBase64(): string {
+    return this.adjuntoSeleccionado >= 0 ? this.adjuntos[this.adjuntoSeleccionado].base64 : '';
+  }
+
+  get pdfFileName(): string {
+    return this.adjuntoSeleccionado >= 0 ? this.adjuntos[this.adjuntoSeleccionado].name : '';
+  }
+
   p12Base64: string = '';
   p12FileName: string = '';
   password: string = '';
@@ -56,7 +134,72 @@ export class FirmaComponent implements OnDestroy {
 
   constructor(private firmaService: FirmaService) {}
 
+  async ngOnInit() {
+    try {
+      const cert = await loadCertFromIndexedDB();
+      if (cert) {
+        this.savedCertFile = cert;
+        await this.readSavedCertAsBase64();
+      }
+    } catch (e) {
+      console.error("No se pudo cargar el certificado guardado", e);
+    }
+  }
+
   ngOnDestroy() { this.pdfDoc = null; }
+
+  // ── Lógica de FirmaEC Modal ──
+  abrirModalFirmaEC() {
+    this.showFirmaECModal = true;
+    this.firmaECTab = 'firmar';
+  }
+
+  cerrarModalFirmaEC() {
+    this.showFirmaECModal = false;
+    this.password = ''; // Limpiar contraseña por seguridad al cerrar
+  }
+
+  cambiarTabFirmaEC(tab: 'firmar' | 'verificar' | 'validar') {
+    this.firmaECTab = tab;
+  }
+
+  onTempCertSelected(e: any) {
+    const file = e.target.files[0];
+    if (file) {
+      this.tempUploadCert = file;
+    }
+  }
+
+  async guardarCertificado() {
+    if (this.tempUploadCert) {
+      await saveCertToIndexedDB(this.tempUploadCert);
+      this.savedCertFile = this.tempUploadCert;
+      await this.readSavedCertAsBase64();
+      alert('Certificado guardado exitosamente en el navegador.');
+      this.tempUploadCert = null;
+    }
+  }
+
+  async borrarCertificado() {
+    await deleteCertFromIndexedDB();
+    this.savedCertFile = null;
+    this.p12Base64 = '';
+    this.p12FileName = '';
+    alert('Certificado borrado del navegador.');
+  }
+
+  private readSavedCertAsBase64(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.savedCertFile) { resolve(); return; }
+      this.p12FileName = this.savedCertFile.name;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.p12Base64 = (reader.result as string).split(',')[1];
+        resolve();
+      };
+      reader.readAsDataURL(this.savedCertFile);
+    });
+  }
 
   // ─── Archivos ────────────────────────────────────────────────────────────────
 
@@ -82,8 +225,8 @@ export class FirmaComponent implements OnDestroy {
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1];
       if (type === 'pdf') {
-        this.pdfBase64 = base64;
-        this.pdfFileName = file.name;
+        this.adjuntos.push({ name: file.name, base64 });
+        this.adjuntoSeleccionado = this.adjuntos.length - 1;
         this.pdfDoc = null;
         this.showViewer = false;
         this.selloFijado = false;
@@ -94,6 +237,27 @@ export class FirmaComponent implements OnDestroy {
         this.p12FileName = file.name;
       }
     };
+  }
+
+  seleccionarAdjunto(index: number) {
+    this.adjuntoSeleccionado = index;
+    this.pdfDoc = null;
+    this.showViewer = false;
+    this.selloFijado = false;
+    this.selloVisible = false;
+    this.page = 1;
+  }
+
+  eliminarAdjunto() {
+    if (this.adjuntoSeleccionado >= 0) {
+      this.adjuntos.splice(this.adjuntoSeleccionado, 1);
+      this.adjuntoSeleccionado = this.adjuntos.length > 0 ? 0 : -1;
+      this.pdfDoc = null;
+      this.showViewer = false;
+      this.selloFijado = false;
+      this.selloVisible = false;
+      this.page = 1;
+    }
   }
 
   // ─── Validación ───────────────────────────────────────────────────────────────
@@ -107,6 +271,49 @@ export class FirmaComponent implements OnDestroy {
   }
 
   // ─── Visor ────────────────────────────────────────────────────────────────────
+
+  isDragOverVerificar: boolean = false;
+  documentosVerificar: { name: string, path: string }[] = [];
+
+  onDragOverVerificar(e: DragEvent) { e.preventDefault(); this.isDragOverVerificar = true; }
+  onDragLeaveVerificar(e: DragEvent) { e.preventDefault(); this.isDragOverVerificar = false; }
+  
+  onDropVerificar(e: DragEvent) {
+    e.preventDefault();
+    this.isDragOverVerificar = false;
+    const files = e.dataTransfer?.files;
+    if (files) {
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].type === 'application/pdf') {
+          this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name });
+        }
+      }
+    }
+  }
+  
+  onFileSelectedVerificar(e: any) {
+    const files = e.target.files;
+    if (files) {
+      for (let i = 0; i < files.length; i++) {
+        this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name });
+      }
+    }
+    // Limpiar input para permitir seleccionar el mismo de nuevo si se borró
+    e.target.value = null;
+  }
+
+  quitarDocumentoVerificar(index: number) {
+    this.documentosVerificar.splice(index, 1);
+  }
+
+  restablecerVerificar() {
+    this.documentosVerificar = [];
+  }
+
+  verificarArchivos() {
+    if (this.documentosVerificar.length === 0) return;
+    alert(`Simulación: ${this.documentosVerificar.length} documento(s) enviado(s) a verificar al backend. Las firmas son válidas.`);
+  }
 
   async abrirVisor() {
     if (!this.formularioValido) {

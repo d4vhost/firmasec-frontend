@@ -1,32 +1,308 @@
-<!-- ═══ FORMULARIO ═══ -->
-<div class="firma-wrap">
-  <h3>Firma Electrónica</h3>
-
-  <label>Documento PDF</label>
-  <div class="drop-zone"
-       (dragover)="onDragOver($event)"
-       (dragleave)="onDragLeave($event)"
-       (drop)="onDrop($event)"
-       (click)="pdfInput.click()"
-       [class.dragover]="isDragOver">
-    <span *ngIf="!pdfFileName">Arrastra el PDF aquí o haz clic para seleccionar</span>
-    <span *ngIf="pdfFileName">{{ pdfFileName }}</span>
-    <input type="file" #pdfInput accept="application/pdf" (change)="onFileSelected($event, 'pdf')">
+<!-- ═══ UI ESCRITORIO (SEGUIMIENTO DE TRAMITE) ═══ -->
+<div class="desktop-app">
+  
+  <!-- Menú Superior -->
+  <div class="menu-bar">
+    <span>Archivo <span class="arrow">▼</span></span>
+    <span>Modulos <span class="arrow">▼</span></span>
+    <span>Reportes <span class="arrow">▼</span></span>
+    <span>Ayuda <span class="arrow">▼</span></span>
+    <div class="user-info">
+      Bienvenido: <b>IVARGAS</b> <i class="fas fa-bell"></i> 273 Nuevos <i class="fas fa-sign-out-alt" style="cursor:pointer" title="Salir"></i>
+    </div>
   </div>
 
-  <label>Certificado (.p12 / .pfx)</label>
-  <button class="btn-file" (click)="p12Input.click()">
-    {{ p12FileName || 'Seleccionar certificado' }}
-  </button>
-  <input type="file" #p12Input accept=".p12,.pfx" (change)="onFileSelected($event, 'p12')">
+  <!-- Toolbar Principal -->
+  <div class="toolbar">
+    <button class="tb-btn tb-new"></button>
+    <button class="tb-btn tb-play"></button>
+    <button class="tb-btn tb-refresh"></button>
+    <button class="tb-btn tb-active">Seguimiento de Tramite</button>
+  </div>
 
-  <label>Contraseña</label>
-  <input type="password" class="form-control" [(ngModel)]="password" placeholder="Contraseña del certificado">
+  <!-- Área de Contenido -->
+  <div class="main-content">
+    
+    <!-- Cabecera de la ventana interna -->
+    <div class="window-header">
+      <span class="icon-file"><i class="fas fa-file-alt"></i></span>
+      <span class="title">Seguimiento de Tramite</span>
+      <div class="window-controls">
+        <button class="wc-min"><i class="fas fa-minus"></i></button>
+        <button class="wc-max"><i class="far fa-square"></i></button>
+        <button class="wc-close"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
 
-  <button class="btn-main" (click)="abrirVisor()" [disabled]="isLoading || !formularioValido">
-    <span *ngIf="isLoading" class="spinner"></span>
-    {{ isLoading ? 'Firmando...' : 'Estampar Firma' }}
-  </button>
+    <div class="window-body">
+      
+      <!-- Top Section (Logo + Info) -->
+      <div class="top-info">
+        <div class="logo-box">
+          <img src="logo.jpg" alt="Logo" style="max-width: 100%; max-height: 100%;">
+        </div>
+        <div class="info-grid">
+          <label>Tarea:</label> <span></span>
+          <label>F. Asignación:</label> <span></span>
+          <label>Estado:</label> <span></span>
+          <label>F. Recepción:</label> <span></span>
+          <label>Anterior/actual:</label> <span></span>
+        </div>
+      </div>
+
+      <!-- Formularios -->
+      <div class="form-section">
+        <div class="form-row">
+          <label>Trámite:</label> <input type="text" readonly>
+          <label>Padre:</label> <input type="text" readonly>
+          <label>Contrato:</label> <input type="text" readonly>
+          <label>Fecha:</label> <input type="text" readonly>
+        </div>
+        <div class="form-row">
+          <label>N. Oficio:</label> <input type="text" readonly>
+          <label>Entrada:</label> <input type="text" readonly>
+          <label>Documento:</label> <input type="text" readonly>
+          <label>Agencia:</label> <input type="text" readonly>
+        </div>
+        <div class="form-row form-row-long">
+          <label>Asunto:</label> <input type="text" readonly>
+          <label>Proceso:</label> <input type="text" readonly>
+        </div>
+        <div class="form-row form-row-long">
+          <label>Observación:</label> <input type="text" readonly>
+          <label class="valign-top">Sumilla /<br>Comentario:</label>
+          <div class="sumilla-box">
+             
+          </div>
+          <div class="sumilla-btns">
+            <button class="btn-green">+</button>
+            <button class="btn-red">-</button>
+          </div>
+        </div>
+        <div class="form-row form-row-long">
+          <label>Proceso cp:</label> <input type="text" readonly>
+          <label>Docs. cp:</label> <input type="text" readonly>
+        </div>
+      </div>
+
+      <!-- Solicitante -->
+      <fieldset class="fieldset-solicitante">
+        <legend>Solicitante</legend>
+        <div class="solicitante-grid">
+          <div class="col"><label>N. Rol</label><input type="text" readonly></div>
+          <div class="col"><label>Nombre</label><input type="text" readonly></div>
+          <div class="col"><label>Apellido</label><input type="text" readonly></div>
+        </div>
+      </fieldset>
+
+      <!-- Bottom Panels -->
+      <div class="bottom-panels">
+        
+        <!-- Left Panel (Tabs) -->
+        <div class="panel-left">
+          <div class="tabs-header">
+            <span class="tab active">EEASA</span>
+            <span class="tab">Contratistas</span>
+            <span class="tab">Actividad/item</span>
+          </div>
+          <div class="tab-body">
+            <div class="tab-toolbar">
+              <button class="btn-green"><i class="fas fa-plus"></i></button>
+              <button class="btn-blue"><i class="fas fa-folder-open"></i></button>
+              <button class="btn-red"><i class="fas fa-minus"></i></button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Sumilla/Comentario</th>
+                  <th>Expira/Otros</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td></td><td></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Panel (Adjuntos) -->
+        <div class="panel-right">
+          <div class="panel-header">
+            <span><i class="fas fa-paperclip"></i> Adjuntos</span>
+            <div class="panel-actions">
+              <!-- Botón FIRMAR añadido aquí -->
+              <button class="btn-firmar" (click)="abrirModalFirmaEC()" title="Firmar Documento"><i class="fas fa-pen-nib"></i> Firmar</button>
+              <button class="btn-green" (click)="pdfInput.click()" title="Añadir PDF"><i class="fas fa-plus"></i></button>
+              <button class="btn-red" (click)="eliminarAdjunto()" title="Eliminar"><i class="fas fa-minus"></i></button>
+              <input type="file" #pdfInput accept="application/pdf" (change)="onFileSelected($event, 'pdf')" style="display:none">
+            </div>
+          </div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th width="30"></th>
+                  <th>Adjunto/Memo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let file of adjuntos; let i = index" 
+                    [class.selected-row]="adjuntoSeleccionado === i" 
+                    (click)="seleccionarAdjunto(i)"
+                    style="cursor: pointer;">
+                  <td class="text-center">{{ i + 1 }}</td>
+                  <td><i class="fas fa-file-pdf" style="color: #d32f2f;"></i> <a class="link">{{ file.name }}</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Footer Toolbar -->
+    <div class="footer-bar">
+      <div class="footer-btn"><i class="fas fa-sign-out-alt"></i> Cerrar y direccionar</div>
+      <div class="footer-btn"><i class="fas fa-clipboard-check"></i> Finalizar trámite</div>
+      <div class="spacer"></div>
+      <div class="footer-btn"><i class="fas fa-list-ul"></i> Listado de Tareas ▼</div>
+      <div class="footer-btn"><i class="fas fa-times-circle"></i> Cerrar</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ MODAL FIRMA EC (Diseño Escritorio) ═══ -->
+<div class="viewer-overlay" *ngIf="showFirmaECModal" (click)="cerrarModalFirmaEC()">
+  <div class="firmaec-modal" (click)="$event.stopPropagation()">
+    <div class="window-header">
+      <span class="icon-logo"><i class="fas fa-flag" style="color: #ffda44; text-shadow: 1px 1px 1px #000;"></i></span>
+      <span class="title">FirmaEC - Sistema de Firma Electrónica</span>
+      <div class="window-controls">
+        <button class="wc-close" (click)="cerrarModalFirmaEC()"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div class="firmaec-body">
+      
+      <!-- Pestañas Laterales o Superiores -->
+      <div class="firmaec-tabs">
+        <button [class.active]="firmaECTab === 'firmar'" (click)="cambiarTabFirmaEC('firmar')"><i class="fas fa-pen-nib"></i> Firmar Documento</button>
+        <button [class.active]="firmaECTab === 'verificar'" (click)="cambiarTabFirmaEC('verificar')"><i class="fas fa-check-double"></i> Verificar Documento</button>
+        <button [class.active]="firmaECTab === 'validar'" (click)="cambiarTabFirmaEC('validar')"><i class="fas fa-shield-alt"></i> Validar Certificado</button>
+      </div>
+
+      <div class="firmaec-content-wrapper">
+        <!-- Contenido Firmar -->
+        <div class="firmaec-content" *ngIf="firmaECTab === 'firmar'">
+          <h4>Firmar Documento</h4>
+          <p class="desc">Seleccione el documento a firmar e ingrese su contraseña.</p>
+          
+          <div class="field-row">
+            <label>Documento:</label>
+            <input type="text" [value]="pdfFileName || 'No se ha seleccionado documento'" readonly class="long-input">
+          </div>
+          
+          <div class="cert-status-plain" *ngIf="savedCertFile">
+            Certificado almacenado en memoria: <b>{{ p12FileName }}</b>
+          </div>
+          <div class="cert-status-plain" *ngIf="!savedCertFile">
+            No tiene certificado almacenado. Vaya a "Validar Certificado" para cargar uno.
+          </div>
+
+          <div class="field-row" *ngIf="savedCertFile">
+            <label>Contraseña:</label>
+            <input type="password" [(ngModel)]="password" placeholder="Contraseña de su certificado">
+          </div>
+
+          <div class="firmaec-actions">
+            <button class="btn-action" [disabled]="!pdfBase64 || !savedCertFile || !password || isLoading" (click)="showFirmaECModal = false; abrirVisor()">
+              <span *ngIf="isLoading" class="spinner"></span>
+              {{ isLoading ? 'Procesando...' : 'Estampar Firma' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido Verificar -->
+        <div class="firmaec-content" *ngIf="firmaECTab === 'verificar'" style="display: flex; flex-direction: column; height: 100%;">
+          
+          <div class="upload-box-verificar" 
+               [class.drag-over]="isDragOverVerificar" 
+               (dragover)="onDragOverVerificar($event)" 
+               (dragleave)="onDragLeaveVerificar($event)" 
+               (drop)="onDropVerificar($event)"
+               (click)="verificarInput.click()">
+            <div class="upload-icon-verificar"><i class="fas fa-file-alt"></i></div>
+            <div class="upload-text-verificar">
+               <strong>Buscar Documento(s)</strong><br>
+               También lo puedes arrastrar aquí
+            </div>
+            <input type="file" #verificarInput accept="application/pdf" multiple (change)="onFileSelectedVerificar($event)" style="display:none">
+          </div>
+          
+          <div class="verificar-title" *ngIf="documentosVerificar.length > 0">
+             <strong>{{ documentosVerificar.length }} DOCUMENTO(S) SELECCIONADO(S)</strong>
+          </div>
+
+          <div class="verificar-table-container" *ngIf="documentosVerificar.length > 0">
+            <table class="verificar-table">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th width="40">Abrir</th>
+                  <th width="40">Quitar</th>
+                  <th width="40">Estado</th>
+                  <th width="50">Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let doc of documentosVerificar; let i = index">
+                  <td>{{ doc.path }}</td>
+                  <td class="text-center"><button class="btn-icon"><i class="fas fa-search"></i></button></td>
+                  <td class="text-center"><button class="btn-icon" (click)="quitarDocumentoVerificar(i)"><i class="fas fa-trash-alt"></i></button></td>
+                  <td class="text-center"><i class="fas fa-times" style="color: red; font-size: 16px;"></i></td>
+                  <td class="text-center"><button class="btn-icon"><i class="fas fa-info"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="spacer" style="flex: 1;"></div>
+
+          <div class="firmaec-actions verificar-actions">
+            <button class="btn-verificar-purple" [disabled]="documentosVerificar.length === 0" (click)="verificarArchivos()"><i class="fas fa-check-circle"></i> Verificar</button>
+            <button class="btn-restablecer" (click)="restablecerVerificar()"><i class="fas fa-redo"></i> Restablecer</button>
+          </div>
+        </div>
+
+        <!-- Contenido Validar Certificado -->
+        <div class="firmaec-content" *ngIf="firmaECTab === 'validar'">
+          <h4>Validar Certificado (P12/PFX)</h4>
+          <p class="desc">Cargue su archivo de certificado. Se guardará de forma segura en la base de datos interna de su navegador (IndexedDB) para futuras firmas.</p>
+          
+          <div class="field-row">
+            <label>Certificado:</label>
+            <input type="file" accept=".p12,.pfx" (change)="onTempCertSelected($event)">
+          </div>
+          
+          <div class="firmaec-actions">
+            <button class="btn-action" [disabled]="!tempUploadCert" (click)="guardarCertificado()">Guardar en Memoria</button>
+            <button class="btn-action btn-danger" *ngIf="savedCertFile" (click)="borrarCertificado()">Borrar Certificado</button>
+          </div>
+          
+          <div class="cert-info" *ngIf="savedCertFile">
+            <h5>Certificado Actual:</h5>
+            <p>Nombre: {{ p12FileName }}</p>
+            <p class="info-note">Nota: La contraseña no se almacena en disco por motivos de seguridad.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <!-- ═══ MODAL VISOR ═══ -->
