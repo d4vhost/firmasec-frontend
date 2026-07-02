@@ -150,7 +150,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
         await this.readSavedCertAsBase64();
       }
     } catch (e) {
-      console.error("No se pudo cargar el certificado guardado", e);
+      console.warn("No se pudo cargar el certificado guardado");
     }
   }
 
@@ -371,7 +371,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
     if (files) {
       for (let i = 0; i < files.length; i++) {
         if (files[i].type === 'application/pdf') {
-          this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name, file: files[i] });
+          this.documentosVerificar.push({ name: files[i].name, path: files[i].name, file: files[i] });
         }
       }
     }
@@ -381,7 +381,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
     const files = e.target.files;
     if (files) {
       for (let i = 0; i < files.length; i++) {
-        this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name, file: files[i] });
+        this.documentosVerificar.push({ name: files[i].name, path: files[i].name, file: files[i] });
       }
     }
     e.target.value = null;
@@ -457,7 +457,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
             }
           },
           error: (err: any) => {
-            console.error('Error verificando documento:', err);
+            // Error de verificación registrado internamente
             doc.verificado = true;
             doc.valido = false;
             doc.firmantes = [{
@@ -485,7 +485,10 @@ export class FirmaComponent implements OnInit, OnDestroy {
 
   verDetalles(doc: any) {
     if (!doc.valido) {
-      alert('Entidad Certificadora no reconocida');
+      this.errorModalTitle = 'Error de Verificación';
+      this.errorModalMsg1 = 'Entidad Certificadora no reconocida';
+      this.errorModalMsg2 = 'El documento no ha sido firmado por una entidad de confianza.';
+      this.showErrorModalValidar = true;
       return;
     }
     this.docSeleccionado = doc;
@@ -517,7 +520,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
 
       await this.renderPagina(this.page);
     } catch (err) {
-      console.error('Error cargando PDF:', err);
+      // Error al cargar PDF
       this.pdfRendering = false;
     }
   }
@@ -612,7 +615,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
     this.coordPdfY = Math.max(10, Math.round(pdfY_fromBottom - 36));
     this.coordPagina = this.page;
 
-    console.log('Click CSS:', clickX, clickY, '-> PDF:', this.coordPdfX, this.coordPdfY, 'page:', this.coordPagina);
+    // Coordenadas de firma calculadas
   }
 
   // ─── Firma ───────────────────────────────────────────────────────────────────
@@ -660,7 +663,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isLoading = false;
         this.password = '';
-        console.error('Error al firmar:', err);
+        // Error al firmar registrado internamente
         
         this.errorModalTitle = 'Error al Firmar';
         this.errorModalMsg1 = 'No se pudo firmar el documento.';
