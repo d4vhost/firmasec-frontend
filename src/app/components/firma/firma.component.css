@@ -317,6 +317,14 @@ input[readonly] { background-color: #FFFFFF; }
   padding: 20px;
   border: 1px solid #ccc;
   min-height: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+.firmaec-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .firmaec-content h4 { margin: 0 0 10px 0; color: #003399; font-size: 16px;}
@@ -588,6 +596,8 @@ input[readonly] { background-color: #FFFFFF; }
 .verificar-table th {
   background: white;
   border-bottom: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
   padding: 6px;
   text-align: center;
   font-weight: bold;
@@ -597,6 +607,8 @@ input[readonly] { background-color: #FFFFFF; }
 .verificar-table td {
   padding: 6px;
   border-bottom: 1px solid #eee;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
   color: #000;
 }
 .verificar-table tbody tr { background: #d0def0; border-bottom: 2px solid white; }
@@ -621,11 +633,11 @@ input[readonly] { background-color: #FFFFFF; }
   border-top: 1px solid #eee;
 }
 .btn-verificar-purple {
-  background: linear-gradient(to bottom, #9b9ece, #7679bc);
+  background: #60629a;
   color: white;
-  border: 1px solid #5a5d9a;
+  border: 1px solid #4a4c7a;
   padding: 8px 25px;
-  border-radius: 6px;
+  border-radius: 3px;
   font-weight: bold;
   cursor: pointer;
   font-size: 13px;
@@ -633,10 +645,13 @@ input[readonly] { background-color: #FFFFFF; }
   align-items: center;
   gap: 6px;
 }
+.btn-verificar-purple:hover:not(:disabled) {
+  background: #4a4c7a;
+}
 .btn-verificar-purple:disabled { 
-  background: #c0c0c0; 
-  border-color: #a0a0a0; 
-  color: #fff;
+  background: #7a7d9f; 
+  border-color: #6a6c8f; 
+  color: #f0f0f0;
   cursor: not-allowed; 
 }
 .btn-restablecer {
@@ -653,3 +668,44 @@ input[readonly] { background-color: #FFFFFF; }
   gap: 6px;
 }
 .btn-restablecer:hover { background: #e8e8e8; }
+
+.adjuntos-selector-box {
+  background: #fdfdfd;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.adjuntos-selector-box select {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: Tahoma;
+  font-size: 13px;
+  padding: 4px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.btn-cert-type {
+  background: linear-gradient(to bottom, #f9f9f9, #e0e0e0);
+  border: 1px solid #aaa;
+  padding: 5px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-cert-type.active {
+  background: #e6e6fa;
+  border: 1px solid #8b8be6;
+  font-weight: bold;
+}
+.btn-cert-type:disabled {
+  background: #f0f0f0;
+  color: #999;
+  cursor: not-allowed;
+}

@@ -198,49 +198,99 @@
       <div class="firmaec-content-wrapper">
         <!-- Contenido Firmar -->
         <div class="firmaec-content" *ngIf="firmaECTab === 'firmar'">
-          <h4>Firmar Documento</h4>
-          <p class="desc">Seleccione el documento a firmar e ingrese su contraseña.</p>
           
-          <div class="field-row">
-            <label>Documento:</label>
-            <input type="text" [value]="pdfFileName || 'No se ha seleccionado documento'" readonly class="long-input">
+          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div class="upload-box-verificar" style="flex: 1; margin-bottom: 0;"
+                 [class.drag-over]="isDragOver" 
+                 (dragover)="onDragOver($event)" 
+                 (dragleave)="onDragLeave($event)" 
+                 (drop)="onDrop($event)"
+                 (click)="firmarInput.click()">
+              <div class="upload-icon-verificar"><i class="fas fa-file-alt"></i></div>
+              <div class="upload-text-verificar">
+                 <strong>Buscar Documento</strong><br>
+                 También lo puedes arrastrar aquí
+              </div>
+              <input type="file" #firmarInput accept="application/pdf" (change)="onFileSelected($event, 'pdf')" style="display:none">
+            </div>
+
+            <div class="adjuntos-selector-box" *ngIf="adjuntos.length > 0">
+              <div class="upload-icon-verificar" style="font-size: 24px; margin-bottom: 5px; margin-right: 0;"><i class="fas fa-paperclip"></i></div>
+              <strong style="font-size: 13px;">Añadir desde Adjuntos</strong>
+              <select #adjuntoSelectFirmar (change)="seleccionarAdjuntoDesdeFirma(adjuntoSelectFirmar.value); adjuntoSelectFirmar.value=''" style="width: 100%; margin-top: 5px; padding: 4px;">
+                <option value="" disabled selected>Seleccione...</option>
+                <option *ngFor="let file of adjuntos; let i = index" [value]="i">{{ file.name }}</option>
+              </select>
+            </div>
           </div>
           
-          <div class="cert-status-plain" *ngIf="savedCertFile">
-            Certificado almacenado en memoria: <b>{{ p12FileName }}</b>
-          </div>
-          <div class="cert-status-plain" *ngIf="!savedCertFile">
-            No tiene certificado almacenado. Vaya a "Validar Certificado" para cargar uno.
-          </div>
+          <div style="background: #fdfdfd; border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-top: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+              
+              <div style="display: flex; align-items: center;">
+                <span style="width: 150px; font-weight: bold; color: #555;">Documento a firmar:</span>
+                <span style="flex: 1; color: #1a1a1a;">
+                  <i class="fas fa-file-pdf" style="color: #d32f2f; margin-right: 5px;" *ngIf="pdfFileName"></i>
+                  {{ pdfFileName ? pdfFileName : '(No se ha seleccionado documento)' }}
+                </span>
+              </div>
 
-          <div class="field-row" *ngIf="savedCertFile">
-            <label>Contraseña:</label>
-            <input type="password" [(ngModel)]="password" placeholder="Contraseña de su certificado">
-          </div>
+              <div style="display: flex; align-items: center;">
+                <span style="width: 150px; font-weight: bold; color: #555;">Certificado almacenado:</span>
+                <span style="flex: 1; color: #1a1a1a;" *ngIf="savedCertFile">
+                  <i class="fas fa-certificate" style="color: #60629a; margin-right: 5px;"></i>
+                  {{ p12FileName }}
+                </span>
+                <span style="flex: 1; color: #1a1a1a;" *ngIf="!savedCertFile">
+                  Valide su certificado para almacenarlo
+                </span>
+              </div>
 
-          <div class="firmaec-actions">
-            <button class="btn-action" [disabled]="!pdfBase64 || !savedCertFile || !password || isLoading" (click)="showFirmaECModal = false; abrirVisor()">
-              <span *ngIf="isLoading" class="spinner"></span>
-              {{ isLoading ? 'Procesando...' : 'Estampar Firma' }}
-            </button>
+              <div style="display: flex; align-items: center;" *ngIf="savedCertFile">
+                <span style="width: 150px; font-weight: bold; color: #555;">Contraseña:</span>
+                <input type="password" [(ngModel)]="password" placeholder="Contraseña de su certificado" style="flex: 1; padding: 5px; border: 1px solid #aaa; border-radius: 3px;">
+              </div>
+              
+            </div>
+
+            <div style="text-align: right; margin-top: 15px;">
+              <button class="btn-action" style="background: #60629a; border: 1px solid #4a4c7a; color: white; padding: 8px 20px; font-weight: bold; font-size: 13px; border-radius: 3px;"
+                      [disabled]="!pdfBase64 || !savedCertFile || !password || isLoading" 
+                      (click)="prepararFirma()">
+                <span *ngIf="isLoading" class="spinner"></span>
+                <i class="fas fa-pen-nib" style="margin-right: 5px;" *ngIf="!isLoading"></i>
+                {{ isLoading ? 'Procesando...' : 'Estampar Firma' }}
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Contenido Verificar -->
         <div class="firmaec-content" *ngIf="firmaECTab === 'verificar'" style="display: flex; flex-direction: column; height: 100%;">
           
-          <div class="upload-box-verificar" 
-               [class.drag-over]="isDragOverVerificar" 
-               (dragover)="onDragOverVerificar($event)" 
-               (dragleave)="onDragLeaveVerificar($event)" 
-               (drop)="onDropVerificar($event)"
-               (click)="verificarInput.click()">
-            <div class="upload-icon-verificar"><i class="fas fa-file-alt"></i></div>
-            <div class="upload-text-verificar">
-               <strong>Buscar Documento(s)</strong><br>
-               También lo puedes arrastrar aquí
+          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div class="upload-box-verificar" style="flex: 1; margin-bottom: 0;"
+                 [class.drag-over]="isDragOverVerificar" 
+                 (dragover)="onDragOverVerificar($event)" 
+                 (dragleave)="onDragLeaveVerificar($event)" 
+                 (drop)="onDropVerificar($event)"
+                 (click)="verificarInput.click()">
+              <div class="upload-icon-verificar"><i class="fas fa-file-alt"></i></div>
+              <div class="upload-text-verificar">
+                 <strong>Buscar Documento(s)</strong><br>
+                 También lo puedes arrastrar aquí
+              </div>
+              <input type="file" #verificarInput accept="application/pdf" multiple (change)="onFileSelectedVerificar($event)" style="display:none">
             </div>
-            <input type="file" #verificarInput accept="application/pdf" multiple (change)="onFileSelectedVerificar($event)" style="display:none">
+
+            <div class="adjuntos-selector-box" *ngIf="adjuntos.length > 0">
+              <div class="upload-icon-verificar" style="font-size: 24px; margin-bottom: 5px; margin-right: 0;"><i class="fas fa-paperclip"></i></div>
+              <strong style="font-size: 13px;">Añadir desde Adjuntos</strong>
+              <select #adjuntoSelect (change)="agregarDesdeAdjuntos(adjuntoSelect.value); adjuntoSelect.value=''" style="width: 100%; margin-top: 5px; padding: 4px;">
+                <option value="">-- Seleccione un adjunto --</option>
+                <option *ngFor="let adj of adjuntos; let i = index" [value]="i">{{ adj.name }}</option>
+              </select>
+            </div>
           </div>
           
           <div class="verificar-title" *ngIf="documentosVerificar.length > 0">
@@ -261,10 +311,19 @@
               <tbody>
                 <tr *ngFor="let doc of documentosVerificar; let i = index">
                   <td>{{ doc.path }}</td>
-                  <td class="text-center"><button class="btn-icon"><i class="fas fa-search"></i></button></td>
-                  <td class="text-center"><button class="btn-icon" (click)="quitarDocumentoVerificar(i)"><i class="fas fa-trash-alt"></i></button></td>
-                  <td class="text-center"><i class="fas fa-times" style="color: red; font-size: 16px;"></i></td>
-                  <td class="text-center"><button class="btn-icon"><i class="fas fa-info"></i></button></td>
+                  <td class="text-center">
+                    <button class="btn-icon" (click)="abrirDocumento(doc)"><i class="fas fa-search"></i></button>
+                  </td>
+                  <td class="text-center">
+                    <button class="btn-icon" (click)="quitarDocumentoVerificar(i)"><i class="fas fa-trash-alt"></i></button>
+                  </td>
+                  <td class="text-center">
+                    <i *ngIf="doc.verificado && doc.valido" class="fas fa-check" style="color: green; font-size: 16px;"></i>
+                    <i *ngIf="doc.verificado && !doc.valido" class="fas fa-times" style="color: red; font-size: 16px;"></i>
+                  </td>
+                  <td class="text-center">
+                    <button *ngIf="doc.verificado" class="btn-icon" (click)="verDetalles(doc)"><i class="fas fa-info"></i></button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -280,30 +339,156 @@
 
         <!-- Contenido Validar Certificado -->
         <div class="firmaec-content" *ngIf="firmaECTab === 'validar'">
-          <h4>Validar Certificado (P12/PFX)</h4>
-          <p class="desc">Cargue su archivo de certificado. Se guardará de forma segura en la base de datos interna de su navegador (IndexedDB) para futuras firmas.</p>
-          
-          <div class="field-row">
-            <label>Certificado:</label>
-            <input type="file" accept=".p12,.pfx" (change)="onTempCertSelected($event)">
+          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 13px;">Certificado en</span>
+            <button class="btn-cert-type active">Archivo</button>
+            <button class="btn-cert-type" disabled title="No soportado en web">Token</button>
           </div>
-          
-          <div class="firmaec-actions">
-            <button class="btn-action" [disabled]="!tempUploadCert" (click)="guardarCertificado()">Guardar en Memoria</button>
-            <button class="btn-action btn-danger" *ngIf="savedCertFile" (click)="borrarCertificado()">Borrar Certificado</button>
+
+          <div *ngIf="savedCertFile" style="background: #fdfdfd; border: 1px solid #ddd; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <i class="fas fa-certificate" style="color: #60629a; margin-right: 8px; font-size: 16px;"></i>
+              <span style="font-size: 13px; color: #333;">Certificado en Memoria: <strong>{{ p12FileName }}</strong></span>
+            </div>
+            <button class="btn-action btn-danger" (click)="borrarCertificado()" style="padding: 5px 10px; font-size: 12px; margin: 0; background: #d32f2f;">
+              <i class="fas fa-trash-alt"></i> Quitar
+            </button>
           </div>
-          
-          <div class="cert-info" *ngIf="savedCertFile">
-            <h5>Certificado Actual:</h5>
-            <p>Nombre: {{ p12FileName }}</p>
-            <p class="info-note">Nota: La contraseña no se almacena en disco por motivos de seguridad.</p>
+
+          <div class="adjuntos-selector-box drag-area-validar" 
+               [class.drag-over]="isDragOverValidar" 
+               (dragover)="onDragOverValidar($event)" 
+               (dragleave)="onDragLeaveValidar($event)" 
+               (drop)="onDropValidar($event)" 
+               (click)="fileInputValidar.click()"
+               style="background: #efefff; border: 1px solid #b3b3d1; cursor: pointer; padding: 20px; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+              <div style="width: 50px; height: 50px; background: #60629a; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-certificate" style="color: white; font-size: 24px;"></i>
+              </div>
+              <div style="text-align: left;">
+                <div style="font-weight: bold; font-size: 14px;">{{ tempUploadCert ? tempUploadCert.name : 'Buscar Nuevo Certificado' }}</div>
+                <div style="font-size: 12px; color: #555;">{{ tempUploadCert ? ((tempUploadCert.size / 1024).toFixed(2) + ' KB') : 'También lo puedes arrastrar aquí' }}</div>
+              </div>
+            </div>
+            <input type="file" accept=".p12,.pfx" #fileInputValidar style="display: none;" (change)="onTempCertSelectedValidar($event)">
+          </div>
+
+          <div style="display: flex; align-items: center; margin-top: 15px;">
+            <label style="width: 100px; font-size: 13px;">Contraseña</label>
+            <input type="password" [(ngModel)]="tempCertPassword" style="flex: 1; padding: 6px; border: 1px solid #60629a;" placeholder="Contraseña del certificado">
+          </div>
+
+          <div style="margin-top: 20px; text-align: center; font-weight: bold; font-size: 13px;">
+            RESULTADOS DE VERIFICACIÓN DE CERTIFICADO ELECTRÓNICO
+          </div>
+
+          <textarea readonly
+                    style="width: 100%; height: 180px; margin-top: 5px; padding: 10px; border: 1px solid #ddd; resize: none; font-family: monospace; font-size: 12px; background: #fdfdfd; box-sizing: border-box;"
+                    [value]="certValidationResult"></textarea>
+
+          <div class="verificar-actions">
+            <button class="btn-verificar-purple" [disabled]="!tempUploadCert || !tempCertPassword" (click)="validarCertificadoBackend()">
+              <i class="fas fa-check-circle"></i> Validar
+            </button>
+            <button class="btn-restablecer" (click)="restablecerValidar()">
+              <i class="fas fa-redo"></i> Restablecer
+            </button>
           </div>
         </div>
-      </div>
 
+        <!-- MODAL DE ERROR ESTILO WINDOWS -->
+        <div class="viewer-overlay" *ngIf="showErrorModalValidar" style="z-index: 10000; background: rgba(0,0,0,0.15);">
+          <div style="background: white; width: 450px; border: 1px solid #777; box-shadow: 2px 2px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+            
+            <div style="background: white; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+              <span style="font-size: 12px; color: black;">{{ errorModalTitle }}</span>
+              <button (click)="showErrorModalValidar = false" style="background: none; border: none; font-size: 14px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="padding: 20px; display: flex; gap: 15px; align-items: center; background: white;">
+              <!-- Icono Octágono Rojo usando SVG o FontAwesome -->
+              <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 50px; height: 50px;">
+                <svg viewBox="0 0 100 100" width="50" height="50">
+                  <polygon points="30,5 70,5 95,30 95,70 70,95 30,95 5,70 5,30" fill="#c00" stroke="#800" stroke-width="2"/>
+                  <rect x="46" y="25" width="8" height="30" fill="white"/>
+                  <circle cx="50" cy="70" r="5" fill="white"/>
+                </svg>
+              </div>
+              <div style="font-size: 13px; font-family: Tahoma, sans-serif;">
+                <div style="margin-bottom: 5px;">{{ errorModalMsg1 }}</div>
+                <div>{{ errorModalMsg2 }}</div>
+              </div>
+            </div>
+
+            <div style="padding: 10px 20px 15px; background: white; text-align: right;">
+              <button (click)="showErrorModalValidar = false" style="background: linear-gradient(to bottom, #f0f0f0, #e0e0e0); border: 1px solid #888; border-radius: 4px; padding: 5px 25px; cursor: pointer; font-family: Tahoma; font-size: 12px;">Aceptar</button>
+            </div>
+            
+          </div>
+        </div>
+
+      </div>
+      
     </div>
   </div>
 </div>
+
+<!-- ═══ MODAL FIRMANTES (DETALLE DE VERIFICACIÓN) ═══ -->
+<div class="viewer-overlay" *ngIf="showFirmantesModal" (click)="showFirmantesModal = false">
+  <div class="firmantes-modal" (click)="$event.stopPropagation()">
+    <div class="window-header" style="background: #f0f0f0; color: black; border-bottom: 1px solid #ccc;">
+      <span class="title" style="font-weight: normal; font-size: 12px;">Firmantes</span>
+      <div class="window-controls">
+        <button class="wc-close" (click)="showFirmantesModal = false" style="color: black;"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div class="firmantes-body" style="padding: 15px; background: white; flex: 1;">
+      <h5 style="margin: 0 0 15px 0;">Total de firmantes: {{ docSeleccionado?.firmantes?.length || 0 }}</h5>
+      
+      <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 12px;">Documento:</p>
+      <p style="margin: 0 0 15px 0; font-size: 12px; color: blue;">{{ docSeleccionado?.path }}</p>
+
+      <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc;">
+        <table class="verificar-table firmantes-table" style="width: 100%; border: none; margin: 0;">
+          <thead style="position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th>Cédula de Identidad /<br>Nombres y Apellidos</th>
+            <th>Razón /<br>Localización</th>
+            <th>Fecha de<br>Firmado</th>
+            <th>Entidad<br>Certificadora</th>
+            <th>Fecha de<br>Emisión</th>
+            <th>Fecha de<br>Expiración</th>
+            <th>Fecha de<br>Revocación</th>
+            <th>Sellado de<br>Tiempo</th>
+            <th>Válido</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let firmante of docSeleccionado?.firmantes" style="background: #c8d1e8;">
+            <td [innerHTML]="firmante.cedulaNombre"></td>
+            <td [innerHTML]="firmante.razonLocalizacion"></td>
+            <td [innerHTML]="firmante.fechaFirmado"></td>
+            <td [innerHTML]="firmante.entidadCertificadora"></td>
+            <td [innerHTML]="firmante.fechaEmision"></td>
+            <td [innerHTML]="firmante.fechaExpiracion"></td>
+            <td [innerHTML]="firmante.fechaRevocacion"></td>
+            <td [innerHTML]="firmante.selladoTiempo"></td>
+            <td class="text-center" style="background: white;">
+              <i *ngIf="firmante.valido" class="fas fa-check" style="color: green; font-size: 18px; font-weight: bold;"></i>
+              <i *ngIf="!firmante.valido" class="fas fa-times" style="color: red; font-size: 18px; font-weight: bold;"></i>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="firmantes-footer" style="padding: 10px; border-top: 1px solid #ccc; background: white; text-align: right;">
+      <button class="btn-restablecer" style="display: inline-block; padding: 4px 15px;" (click)="showFirmantesModal = false"><u>S</u>alir</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ═══ MODAL VISOR ═══ -->
 <div class="viewer-overlay" *ngIf="showViewer" (click)="cerrarVisor()">

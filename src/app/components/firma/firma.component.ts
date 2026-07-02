@@ -103,6 +103,14 @@ export class FirmaComponent implements OnInit, OnDestroy {
   isDragOver: boolean = false;
   isLoading: boolean = false;
 
+  // ── Validar Certificado ──
+  tempCertPassword: string = '';
+  certValidationResult: string = '';
+  showErrorModalValidar: boolean = false;
+  errorModalTitle: string = 'Error';
+  errorModalMsg1: string = 'No se encuentran certificados para firmar';
+  errorModalMsg2: string = 'Puede estar expirado, revocado o no reconocido';
+
   // ── Visor ──
   showViewer: boolean = false;
   pdfRendering: boolean = false;
@@ -152,6 +160,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
   abrirModalFirmaEC() {
     this.showFirmaECModal = true;
     this.firmaECTab = 'firmar';
+    this.adjuntoSeleccionado = -1;
   }
 
   cerrarModalFirmaEC() {
@@ -185,7 +194,73 @@ export class FirmaComponent implements OnInit, OnDestroy {
     this.savedCertFile = null;
     this.p12Base64 = '';
     this.p12FileName = '';
+    this.tempUploadCert = null;
+    this.certValidationResult = '';
+    this.tempCertPassword = '';
     alert('Certificado borrado del navegador.');
+  }
+
+  onTempCertSelectedValidar(e: any) {
+    const file = e.target.files[0];
+    if (file) {
+      this.tempUploadCert = file;
+    }
+  }
+
+  isDragOverValidar: boolean = false;
+  onDragOverValidar(e: DragEvent) { e.preventDefault(); this.isDragOverValidar = true; }
+  onDragLeaveValidar(e: DragEvent) { e.preventDefault(); this.isDragOverValidar = false; }
+  onDropValidar(e: DragEvent) {
+    e.preventDefault();
+    this.isDragOverValidar = false;
+    const file = e.dataTransfer?.files[0];
+    if (file && (file.name.endsWith('.p12') || file.name.endsWith('.pfx'))) {
+      this.tempUploadCert = file;
+    } else {
+      alert('Por favor arrastre un archivo .p12 o .pfx válido.');
+    }
+  }
+
+  restablecerValidar() {
+    this.tempUploadCert = null;
+    this.tempCertPassword = '';
+    this.certValidationResult = '';
+  }
+
+  validarCertificadoBackend() {
+    if (!this.tempUploadCert || !this.tempCertPassword) return;
+    
+    this.certValidationResult = 'Validando certificado...';
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(this.tempUploadCert);
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      this.firmaService.validarCertificado(base64, this.tempCertPassword).subscribe({
+        next: async (res) => {
+          if (res.valido) {
+            this.certValidationResult = `=== RESULTADO DE LA VERIFICACIÓN ===\n\nEstado: VÁLIDO\n\nPropietario: ${res.subjectDN}\nEmitido por: ${res.issuerDN}\nVálido desde: ${new Date(res.validFrom).toLocaleString()}\nVálido hasta: ${new Date(res.validTo).toLocaleString()}\n\nEl certificado ha sido verificado exitosamente y puede ser utilizado para firmar documentos.`;
+            // Guardar automáticamente tras validación exitosa
+            await saveCertToIndexedDB(this.tempUploadCert!);
+            this.savedCertFile = this.tempUploadCert;
+            await this.readSavedCertAsBase64();
+          } else {
+            this.certValidationResult = ``;
+            this.errorModalTitle = 'Error';
+            this.errorModalMsg1 = 'No se encuentran certificados para firmar';
+            this.errorModalMsg2 = 'Puede estar expirado, revocado o no reconocido';
+            this.showErrorModalValidar = true;
+          }
+        },
+        error: (err) => {
+          this.certValidationResult = ``;
+          this.errorModalTitle = 'Error';
+          this.errorModalMsg1 = 'Error de conexión con el servidor de validación';
+          this.errorModalMsg2 = err.message || 'Verifique que el backend esté en ejecución.';
+          this.showErrorModalValidar = true;
+        }
+      });
+    };
   }
 
   private readSavedCertAsBase64(): Promise<void> {
@@ -248,6 +323,13 @@ export class FirmaComponent implements OnInit, OnDestroy {
     this.page = 1;
   }
 
+  seleccionarAdjuntoDesdeFirma(indexStr: string) {
+    const index = parseInt(indexStr, 10);
+    if (!isNaN(index) && index >= 0 && index < this.adjuntos.length) {
+      this.seleccionarAdjunto(index);
+    }
+  }
+
   eliminarAdjunto() {
     if (this.adjuntoSeleccionado >= 0) {
       this.adjuntos.splice(this.adjuntoSeleccionado, 1);
@@ -273,7 +355,11 @@ export class FirmaComponent implements OnInit, OnDestroy {
   // ─── Visor ────────────────────────────────────────────────────────────────────
 
   isDragOverVerificar: boolean = false;
-  documentosVerificar: { name: string, path: string }[] = [];
+  documentosVerificar: { name: string, path: string, file: File, verificado?: boolean, valido?: boolean, firmantes?: any[] }[] = [];
+  
+  showFirmantesModal: boolean = false;
+  docSeleccionado: any = null;
+  fechaActual = new Date();
 
   onDragOverVerificar(e: DragEvent) { e.preventDefault(); this.isDragOverVerificar = true; }
   onDragLeaveVerificar(e: DragEvent) { e.preventDefault(); this.isDragOverVerificar = false; }
@@ -285,7 +371,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
     if (files) {
       for (let i = 0; i < files.length; i++) {
         if (files[i].type === 'application/pdf') {
-          this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name });
+          this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name, file: files[i] });
         }
       }
     }
@@ -295,11 +381,34 @@ export class FirmaComponent implements OnInit, OnDestroy {
     const files = e.target.files;
     if (files) {
       for (let i = 0; i < files.length; i++) {
-        this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name });
+        this.documentosVerificar.push({ name: files[i].name, path: 'C:\\Users\\mcruz\\Downloads\\' + files[i].name, file: files[i] });
       }
     }
-    // Limpiar input para permitir seleccionar el mismo de nuevo si se borró
     e.target.value = null;
+  }
+
+  agregarDesdeAdjuntos(indexStr: string) {
+    if (!indexStr) return;
+    const index = parseInt(indexStr, 10);
+    const adj = this.adjuntos[index];
+    if (adj) {
+      const exists = this.documentosVerificar.some(d => d.name === adj.name);
+      if (!exists) {
+        // Convertir base64 a File para unificación
+        const byteCharacters = atob(adj.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let j = 0; j < byteCharacters.length; j++) {
+            byteNumbers[j] = byteCharacters.charCodeAt(j);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {type: 'application/pdf'});
+        const file = new File([blob], adj.name, {type: 'application/pdf'});
+
+        this.documentosVerificar.push({ name: adj.name, path: '(Adjunto) ' + adj.name, file: file });
+      } else {
+        alert('Este documento ya se encuentra en la lista para verificar.');
+      }
+    }
   }
 
   quitarDocumentoVerificar(index: number) {
@@ -312,7 +421,75 @@ export class FirmaComponent implements OnInit, OnDestroy {
 
   verificarArchivos() {
     if (this.documentosVerificar.length === 0) return;
-    alert(`Simulación: ${this.documentosVerificar.length} documento(s) enviado(s) a verificar al backend. Las firmas son válidas.`);
+    
+    this.documentosVerificar.forEach(doc => {
+      // Leer el archivo como Base64 y enviarlo al backend
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        
+        this.firmaService.verificarDocumento(base64).subscribe({
+          next: (resp: any) => {
+            doc.verificado = true;
+            
+            if (resp.firmantes && resp.firmantes.length > 0) {
+              doc.firmantes = resp.firmantes.map((f: any) => {
+                let idText = f.cedula || '---';
+                return {
+                  cedulaNombre: idText + '<br>' + (f.nombre || '---'),
+                  razonLocalizacion: (f.razon || 'Firma Electrónica') + '<br>' + (f.localizacion || 'Ecuador'),
+                fechaFirmado: (f.fechaFirmado || '---').replace(' hora de Ecuador', '<br>hora de Ecuador'),
+                entidadCertificadora: f.entidadCertificadora || 'Desconocida',
+                fechaEmision: (f.fechaEmision || '---').replace(' hora de Ecuador', '<br>hora de Ecuador'),
+                fechaExpiracion: (f.fechaExpiracion || '---').replace(' hora de Ecuador', '<br>hora de Ecuador'),
+                fechaRevocacion: f.fechaRevocacion || '---',
+                selladoTiempo: f.selladoTiempo || 'No',
+                valido: f.valido === true
+                };
+              });
+              
+              // El documento es válido si TODOS sus firmantes son válidos
+              doc.valido = doc.firmantes?.every((f: any) => f.valido) ?? false;
+            } else {
+              // Sin firmas
+              doc.valido = false;
+              doc.firmantes = [];
+            }
+          },
+          error: (err: any) => {
+            console.error('Error verificando documento:', err);
+            doc.verificado = true;
+            doc.valido = false;
+            doc.firmantes = [{
+              cedulaNombre: '---<br>Error de verificación',
+              razonLocalizacion: '---',
+              fechaFirmado: '---',
+              entidadCertificadora: 'No se pudo conectar al servidor',
+              fechaEmision: '---',
+              fechaExpiracion: '---',
+              fechaRevocacion: '---',
+              selladoTiempo: '---',
+              valido: false
+            }];
+          }
+        });
+      };
+      reader.readAsDataURL(doc.file);
+    });
+  }
+
+  abrirDocumento(doc: any) {
+    const url = URL.createObjectURL(doc.file);
+    window.open(url, '_blank');
+  }
+
+  verDetalles(doc: any) {
+    if (!doc.valido) {
+      alert('Entidad Certificadora no reconocida');
+      return;
+    }
+    this.docSeleccionado = doc;
+    this.showFirmantesModal = true;
   }
 
   async abrirVisor() {
@@ -440,6 +617,31 @@ export class FirmaComponent implements OnInit, OnDestroy {
 
   // ─── Firma ───────────────────────────────────────────────────────────────────
 
+  prepararFirma() {
+    this.isLoading = true;
+    this.firmaService.validarCertificado(this.p12Base64, this.password).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        if (res.valido) {
+          this.showFirmaECModal = false;
+          this.abrirVisor();
+        } else {
+          this.errorModalTitle = 'Contraseña Incorrecta';
+          this.errorModalMsg1 = 'La contraseña del certificado no es válida.';
+          this.errorModalMsg2 = 'Por favor, revise su contraseña e intente nuevamente.';
+          this.showErrorModalValidar = true;
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.errorModalTitle = 'Error de Validación';
+        this.errorModalMsg1 = 'No se pudo validar el certificado.';
+        this.errorModalMsg2 = err.error?.message || 'Verifique la contraseña y la vigencia del certificado.';
+        this.showErrorModalValidar = true;
+      }
+    });
+  }
+
   confirmarFirma() {
     this.showViewer = false;
     this.isLoading = true;
@@ -459,7 +661,11 @@ export class FirmaComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.password = '';
         console.error('Error al firmar:', err);
-        alert('Error al firmar. Verifica tu contraseña y certificado.');
+        
+        this.errorModalTitle = 'Error al Firmar';
+        this.errorModalMsg1 = 'No se pudo firmar el documento.';
+        this.errorModalMsg2 = 'Por favor, asegúrese de que la contraseña sea correcta.';
+        this.showErrorModalValidar = true;
       }
     });
   }

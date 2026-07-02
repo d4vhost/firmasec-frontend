@@ -19,4 +19,12 @@ export class FirmaService {
     };
     return this.http.post(`${this.apiUrl}/firmar`, payload);
   }
+
+  verificarDocumento(pdfBase64: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/verificar`, { pdfBase64 });
+  }
+
+  validarCertificado(p12Base64: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/validar-certificado`, { p12Base64, password });
+  }
 }
