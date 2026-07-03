@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { FirmaService } from '../../services/firma.service';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
 
-// Worker local (copiado a /pdf.worker.min.mjs por angular.json assets)
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Forzar la misma versión del worker desde CDN para evitar el error de "API version does not match Worker version"
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.mjs`;
 
 const DB_NAME = 'FirmaEC_DB';
 const STORE_NAME = 'certStore';
@@ -404,7 +404,7 @@ export class FirmaComponent implements OnInit, OnDestroy {
         const blob = new Blob([byteArray], {type: 'application/pdf'});
         const file = new File([blob], adj.name, {type: 'application/pdf'});
 
-        this.documentosVerificar.push({ name: adj.name, path: '(Adjunto) ' + adj.name, file: file });
+        this.documentosVerificar.push({ name: adj.name, path: adj.name, file: file });
       } else {
         alert('Este documento ya se encuentra en la lista para verificar.');
       }
@@ -505,7 +505,23 @@ export class FirmaComponent implements OnInit, OnDestroy {
     this.showViewer = true;
     this.pdfRendering = true;
 
-    setTimeout(() => this.cargarPdf(), 50); // Dar tiempo al DOM
+    // Esperar a que Angular renderice el modal y el canvas esté disponible
+    this.esperarCanvas();
+  }
+
+  private esperarCanvas(intentos: number = 0) {
+    setTimeout(() => {
+      const wrapper = this.canvasWrapper?.nativeElement;
+      if (wrapper && wrapper.clientWidth > 0) {
+        this.cargarPdf();
+      } else if (intentos < 10) {
+        // Reintentar hasta que el DOM esté listo (máx 10 intentos = 2 segundos)
+        this.esperarCanvas(intentos + 1);
+      } else {
+        this.pdfRendering = false;
+        alert('Error: No se pudo cargar el visor del PDF. Intente de nuevo.');
+      }
+    }, 200);
   }
 
   private async cargarPdf() {
@@ -520,8 +536,9 @@ export class FirmaComponent implements OnInit, OnDestroy {
 
       await this.renderPagina(this.page);
     } catch (err) {
-      // Error al cargar PDF
+      console.error('Error al cargar PDF:', err);
       this.pdfRendering = false;
+      alert('Error interno al renderizar el PDF. Revisa la consola (F12).');
     }
   }
 
@@ -550,7 +567,6 @@ export class FirmaComponent implements OnInit, OnDestroy {
     }).promise;
 
     this.pdfRendering = false;
-    this.selloVisible = true;
   }
 
   cerrarVisor() {
@@ -626,7 +642,6 @@ export class FirmaComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isLoading = false;
         if (res.valido) {
-          this.showFirmaECModal = false;
           this.abrirVisor();
         } else {
           this.errorModalTitle = 'Contraseña Incorrecta';

@@ -511,8 +511,8 @@ input[readonly] { background-color: #FFFFFF; }
   border: 1px dashed #aaa;
 }
 .sello-qr-svg {
-  width: 26px;
-  height: 26px;
+  width: 60px;
+  height: 60px;
   flex-shrink: 0;
   border: none;
   background: transparent;
@@ -523,22 +523,22 @@ input[readonly] { background-color: #FFFFFF; }
   gap: 2px;
 }
 .sello-l1 {
-  font-size: 3.5px;
+  font-size: 8px;
   line-height: 1;
   color: #000;
   font-weight: normal;
   font-family: 'Courier New', Courier, monospace;
 }
 .sello-l2 {
-  font-size: 3.5px;
+  font-size: 8px;
   line-height: 1;
   color: #000;
   font-weight: normal;
   font-family: 'Courier New', Courier, monospace;
-  margin-bottom: 1.5px;
+  margin-bottom: 3px;
 }
 .sello-nombre {
-  font-size: 5.5px;
+  font-size: 13px;
   line-height: 1;
   color: #000;
   font-weight: bold;
@@ -687,8 +687,8 @@ input[readonly] { background-color: #FFFFFF; }
   font-family: Tahoma;
   font-size: 13px;
   padding: 4px;
-  width: 90%;
-  max-width: 400px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-cert-type {

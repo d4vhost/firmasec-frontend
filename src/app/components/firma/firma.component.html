@@ -219,7 +219,7 @@
               <strong style="font-size: 13px;">Añadir desde Adjuntos</strong>
               <select #adjuntoSelectFirmar (change)="seleccionarAdjuntoDesdeFirma(adjuntoSelectFirmar.value); adjuntoSelectFirmar.value=''" style="width: 100%; margin-top: 5px; padding: 4px;">
                 <option value="" disabled selected>Seleccione...</option>
-                <option *ngFor="let file of adjuntos; let i = index" [value]="i">{{ file.name }}</option>
+                <option *ngFor="let file of adjuntos; let i = index" [value]="i" [title]="file.name">{{ file.name.length > 50 ? (file.name | slice:0:50) + '...' : file.name }}</option>
               </select>
             </div>
           </div>
@@ -288,7 +288,7 @@
               <strong style="font-size: 13px;">Añadir desde Adjuntos</strong>
               <select #adjuntoSelect (change)="agregarDesdeAdjuntos(adjuntoSelect.value); adjuntoSelect.value=''" style="width: 100%; margin-top: 5px; padding: 4px;">
                 <option value="">-- Seleccione un adjunto --</option>
-                <option *ngFor="let adj of adjuntos; let i = index" [value]="i">{{ adj.name }}</option>
+                <option *ngFor="let adj of adjuntos; let i = index" [value]="i" [title]="adj.name">{{ adj.name.length > 50 ? (adj.name | slice:0:50) + '...' : adj.name }}</option>
               </select>
             </div>
           </div>
@@ -497,11 +497,13 @@
     <!-- Barra superior -->
     <div class="viewer-bar">
       <span *ngIf="pdfRendering">Cargando PDF...</span>
-      <span *ngIf="!pdfRendering && !selloFijado">Haz clic en el PDF donde quieras poner la firma</span>
+      <span *ngIf="!pdfRendering && !selloVisible">Navegue por el documento y presione "Ubicar Firma"</span>
+      <span *ngIf="!pdfRendering && selloVisible && !selloFijado">Haz clic en el PDF donde quieras poner la firma</span>
       <span *ngIf="!pdfRendering && selloFijado">Firma ubicada — Página {{ coordPagina }} · X:{{ coordPdfX }}, Y:{{ coordPdfY }}</span>
       <div class="bar-btns">
+        <button class="btn-confirmar" *ngIf="!pdfRendering && !selloVisible && !selloFijado" (click)="selloVisible = true">Ubicar Firma</button>
         <button *ngIf="selloFijado" (click)="selloFijado = false; selloVisible = true">Reubicar</button>
-        <button class="btn-confirmar" *ngIf="selloFijado" (click)="confirmarFirma()">Confirmar y Firmar</button>
+        <button class="btn-confirmar" *ngIf="selloFijado" (click)="confirmarFirma()"><i class="fas fa-check"></i> Confirmar y Firmar</button>
         <button class="btn-cerrar" (click)="cerrarVisor()">X</button>
       </div>
     </div>

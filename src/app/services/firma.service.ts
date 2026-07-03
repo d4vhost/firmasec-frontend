@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class FirmaService {
-  private apiUrl = 'http://localhost:8080/firmaec-api/api/firma'; // Cambiado a nuevo controlador
+  private apiUrl = 'http://localhost:8080/firmaec-api/api/firma'; // HTTP local (en producción cambiar a HTTPS)
 
   constructor(private http: HttpClient) {}
 
