@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class FirmaService {
-  private apiUrl = 'http://localhost:8080/firmaec-api/api/firma'; // HTTP local (en producción cambiar a HTTPS)
+  private apiUrl = 'https://app.eeasa.com.ec/WSfirmaeeasa/api/firma';
 
   constructor(private http: HttpClient) {}
 

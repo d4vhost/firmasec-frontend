@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { FirmaService } from '../../services/firma.service';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
 
-// Forzar la misma versión del worker desde CDN para evitar el error de "API version does not match Worker version"
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.mjs`;
+// Usar el worker local empaquetado en el WAR con extensión .js (renombrado en build-war.js) para evitar bloqueo MIME
+pdfjsLib.GlobalWorkerOptions.workerSrc = `./pdf.worker.min.js`;
 
 const DB_NAME = 'FirmaEC_DB';
 const STORE_NAME = 'certStore';
