@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FirmaService } from '../../services/firma.service';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
 
-// Usar el worker local empaquetado en el WAR con extensión .js (renombrado en build-war.js) para evitar bloqueo MIME
-pdfjsLib.GlobalWorkerOptions.workerSrc = `./pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
 
 const DB_NAME = 'FirmaEC_DB';
 const STORE_NAME = 'certStore';
@@ -484,10 +483,10 @@ export class FirmaComponent implements OnInit, OnDestroy {
   }
 
   verDetalles(doc: any) {
-    if (!doc.valido) {
-      this.errorModalTitle = 'Error de Verificación';
-      this.errorModalMsg1 = 'Entidad Certificadora no reconocida';
-      this.errorModalMsg2 = 'El documento no ha sido firmado por una entidad de confianza.';
+    if (!doc.firmantes || doc.firmantes.length === 0) {
+      this.errorModalTitle = 'Documento sin firmas';
+      this.errorModalMsg1 = 'El documento no contiene firmas electrónicas.';
+      this.errorModalMsg2 = '';
       this.showErrorModalValidar = true;
       return;
     }
@@ -689,11 +688,20 @@ export class FirmaComponent implements OnInit, OnDestroy {
   }
 
   private descargarPdf(base64: string, fileName: string) {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+    
     const link = document.createElement('a');
-    link.href = 'data:application/pdf;base64,' + base64;
+    link.href = URL.createObjectURL(blob);
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   }
 }
